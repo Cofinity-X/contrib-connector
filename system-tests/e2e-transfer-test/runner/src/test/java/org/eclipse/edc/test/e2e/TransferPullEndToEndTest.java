@@ -33,6 +33,7 @@ import org.eclipse.edc.junit.extensions.RuntimePerClassExtension;
 import org.eclipse.edc.spi.EdcException;
 import org.eclipse.edc.spi.event.EventEnvelope;
 import org.eclipse.edc.spi.security.Vault;
+import org.eclipse.edc.spi.types.domain.DataAddress;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,6 +53,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.AbstractMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -169,76 +171,50 @@ class TransferPullEndToEndTest {
 
         @Test
         void suspendAndResumeByConsumer_httpPull_dataTransfer_withEdrCache() {
-            var assetId = UUID.randomUUID().toString();
-            createResourcesOnProvider(assetId, httpSourceDataAddress());
+            var assetId = start_httpPull_dataTransfer();
+            var startedTransferContext = checkStarted_httpPull_dataTransfer(assetId);
 
-            var transferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
-                    .withTransferType("HttpData-PULL")
-                    .execute();
+            CONSUMER.suspendTransfer(startedTransferContext.consumerTransferProcessId, "any reason");
+            checkSuspended_httpPull_dataTransfer(startedTransferContext);
 
-            CONSUMER.awaitTransferToBeInState(transferProcessId, STARTED);
-
-            var edr = await().atMost(timeout).until(() -> CONSUMER.getEdr(transferProcessId), Objects::nonNull);
-
-            var msg = UUID.randomUUID().toString();
-            await().atMost(timeout).untilAsserted(() -> CONSUMER.pullData(edr, Map.of("message", msg), body -> assertThat(body).isEqualTo("data")));
-
-            CONSUMER.suspendTransfer(transferProcessId, "supension");
-
-            CONSUMER.awaitTransferToBeInState(transferProcessId, SUSPENDED);
-
-            // checks that the EDR is gone once the transfer has been suspended
-            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.getEdr(transferProcessId)));
-            // checks that transfer fails
-            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.pullData(edr, Map.of("message", msg), body -> assertThat(body).isEqualTo("data"))));
-
-            CONSUMER.resumeTransfer(transferProcessId);
-
-            // check that transfer is available again
-            CONSUMER.awaitTransferToBeInState(transferProcessId, STARTED);
-            var secondEdr = await().atMost(timeout).until(() -> CONSUMER.getEdr(transferProcessId), Objects::nonNull);
-            var secondMessage = UUID.randomUUID().toString();
-            await().atMost(timeout).untilAsserted(() -> CONSUMER.pullData(secondEdr, Map.of("message", secondMessage), body -> assertThat(body).isEqualTo("data")));
+            CONSUMER.resumeTransfer(startedTransferContext.consumerTransferProcessId);
+            checkResumed_httpPull_dataTransfer(startedTransferContext);
 
             providerDataSource.verify(request("/source").withMethod("GET"));
         }
 
         @Test
         void suspendAndResumeByProvider_httpPull_dataTransfer_withEdrCache() {
-            var assetId = UUID.randomUUID().toString();
-            createResourcesOnProvider(assetId, httpSourceDataAddress());
+            var assetId = start_httpPull_dataTransfer();
+            var startedTransferContext = checkStarted_httpPull_dataTransfer(assetId);
 
-            var consumerTransferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
-                    .withTransferType("HttpData-PULL")
-                    .execute();
+            PROVIDER.suspendTransfer(startedTransferContext.providerTransferProcessId, "any reason");
+            checkSuspended_httpPull_dataTransfer(startedTransferContext);
 
-            CONSUMER.awaitTransferToBeInState(consumerTransferProcessId, STARTED);
+            PROVIDER.resumeTransfer(startedTransferContext.providerTransferProcessId);
+            checkResumed_httpPull_dataTransfer(startedTransferContext);
 
-            var edr = await().atMost(timeout).until(() -> CONSUMER.getEdr(consumerTransferProcessId), Objects::nonNull);
+            providerDataSource.verify(request("/source").withMethod("GET"));
+        }
 
-            var msg = UUID.randomUUID().toString();
-            await().atMost(timeout).untilAsserted(() -> CONSUMER.pullData(edr, Map.of("message", msg), body -> assertThat(body).isEqualTo("data")));
+        @Test
+        void terminateByProvider_httpPull_dataTransfer() {
+            var assetId = start_httpPull_dataTransfer();
+            var startedTransferContext = checkStarted_httpPull_dataTransfer(assetId);
 
-            var providerTransferProcessId  = PROVIDER.getTransferProcesses().stream()
-                    .filter(filter -> filter.asJsonObject().getString("correlationId").equals(consumerTransferProcessId))
-                    .map(id -> id.asJsonObject().getString("@id")).findFirst().orElseThrow();
+            PROVIDER.terminateTransfer(startedTransferContext.providerTransferProcessId);
+            checkTerminated_httpPull_dataTransfer(startedTransferContext);
 
-            PROVIDER.suspendTransfer(providerTransferProcessId, "supension");
+            providerDataSource.verify(request("/source").withMethod("GET"));
+        }
 
-            PROVIDER.awaitTransferToBeInState(providerTransferProcessId, SUSPENDED);
+        @Test
+        void terminateByConsumer_httpPull_dataTransfer() {
+            var assetId = start_httpPull_dataTransfer();
+            var startedTransferContext = checkStarted_httpPull_dataTransfer(assetId);
 
-            // checks that the EDR is gone once the transfer has been suspended
-            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.getEdr(consumerTransferProcessId)));
-            // checks that transfer fails
-            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.pullData(edr, Map.of("message", msg), body -> assertThat(body).isEqualTo("data"))));
-
-            PROVIDER.resumeTransfer(providerTransferProcessId);
-
-            // check that transfer is available again
-            PROVIDER.awaitTransferToBeInState(providerTransferProcessId, STARTED);
-            var secondEdr = await().atMost(timeout).until(() -> CONSUMER.getEdr(consumerTransferProcessId), Objects::nonNull);
-            var secondMessage = UUID.randomUUID().toString();
-            await().atMost(timeout).untilAsserted(() -> CONSUMER.pullData(secondEdr, Map.of("message", secondMessage), body -> assertThat(body).isEqualTo("data")));
+            CONSUMER.terminateTransfer(startedTransferContext.consumerTransferProcessId);
+            checkTerminated_httpPull_dataTransfer(startedTransferContext);
 
             providerDataSource.verify(request("/source").withMethod("GET"));
         }
@@ -340,6 +316,68 @@ class TransferPullEndToEndTest {
             }
         }
 
+
+        private String start_httpPull_dataTransfer(){
+            var assetId = UUID.randomUUID().toString();
+            createResourcesOnProvider(assetId, httpSourceDataAddress());
+
+            return assetId;
+        }
+
+        private StartedTransferContext checkStarted_httpPull_dataTransfer(String assetId){
+            var consumerTransferProcessId = CONSUMER.requestAssetFrom(assetId, PROVIDER)
+                    .withTransferType("HttpData-PULL")
+                    .execute();
+            CONSUMER.awaitTransferToBeInState(consumerTransferProcessId, STARTED);
+
+            var providerTransferProcessId  = PROVIDER.getTransferProcesses().stream()
+                    .filter(filter -> filter.asJsonObject().getString("correlationId").equals(consumerTransferProcessId))
+                    .map(id -> id.asJsonObject().getString("@id")).findFirst().orElseThrow();
+            PROVIDER.awaitTransferToBeInState(providerTransferProcessId, STARTED);
+
+            var edrMessage = assertDataIsAccessible(consumerTransferProcessId);
+
+            return new StartedTransferContext(consumerTransferProcessId, providerTransferProcessId, edrMessage.getKey(), edrMessage.getValue());
+        }
+
+        private void checkSuspended_httpPull_dataTransfer(StartedTransferContext startedTransferContext){
+            PROVIDER.awaitTransferToBeInState(startedTransferContext.providerTransferProcessId, SUSPENDED);
+            CONSUMER.awaitTransferToBeInState(startedTransferContext.consumerTransferProcessId, SUSPENDED);
+
+            assertDataIsNotAccessible(startedTransferContext);
+        }
+
+        private void checkResumed_httpPull_dataTransfer(StartedTransferContext startedTransferContext){
+            PROVIDER.awaitTransferToBeInState(startedTransferContext.providerTransferProcessId, STARTED);
+            CONSUMER.awaitTransferToBeInState(startedTransferContext.consumerTransferProcessId, STARTED);
+
+            assertDataIsAccessible(startedTransferContext.consumerTransferProcessId);
+        }
+
+        private void checkTerminated_httpPull_dataTransfer(StartedTransferContext startedTransferContext){
+            CONSUMER.awaitTransferToBeInState(startedTransferContext.consumerTransferProcessId, TERMINATED);
+            PROVIDER.awaitTransferToBeInState(startedTransferContext.providerTransferProcessId, DEPROVISIONED);
+
+            assertDataIsNotAccessible(startedTransferContext);
+        }
+
+        private Map.Entry<DataAddress, String> assertDataIsAccessible(String consumerTransferProcessId) {
+            var edr = await().atMost(timeout).until(() -> CONSUMER.getEdr(consumerTransferProcessId), Objects::nonNull);
+            var msg = UUID.randomUUID().toString();
+            await().atMost(timeout).untilAsserted(() -> CONSUMER.pullData(edr, Map.of("message", msg), body -> assertThat(body).isEqualTo("data")));
+
+            return new AbstractMap.SimpleEntry<>(edr, msg);
+        }
+
+        private void assertDataIsNotAccessible(StartedTransferContext startedTransferContext) {
+            // checks that the EDR is gone once the transfer has been suspended
+            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.getEdr(startedTransferContext.consumerTransferProcessId)));
+            // checks that transfer fails
+            await().atMost(timeout).untilAsserted(() -> assertThatThrownBy(() -> CONSUMER.pullData(startedTransferContext.edr, Map.of("message", startedTransferContext.msg), body -> assertThat(body).isEqualTo("data"))));
+        }
+
+        private record StartedTransferContext (String consumerTransferProcessId, String providerTransferProcessId, DataAddress edr, String msg) { }
+
         /**
          * Mocked http provisioner
          */
@@ -378,6 +416,7 @@ class TransferPullEndToEndTest {
             }
         }
     }
+
 
     @Nested
     @EndToEndTest
