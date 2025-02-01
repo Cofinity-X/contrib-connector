@@ -37,6 +37,7 @@ swagger = "2.2.28"
 titanium = "1.4.1"
 kafkaClients = "3.9.0"
 testcontainers = "1.20.4"
+kindcontainer = "1.4.7"
 tink = "1.15.0"
 
 
@@ -92,6 +93,7 @@ testcontainers-junit = { module = "org.testcontainers:junit-jupiter", version.re
 testcontainers-kafka = { module = "org.testcontainers:kafka", version.ref = "testcontainers" }
 testcontainers-postgres = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 testcontainers-vault = { module = "org.testcontainers:vault", version.ref = "testcontainers" }
+testcontainers-kind = { module = "com.dajudge.kindcontainer:kindcontainer", version.ref = "kindcontainer" }
 tink = { module = "com.google.crypto.tink:tink", version.ref = "tink" }
 
 

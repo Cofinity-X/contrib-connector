@@ -167,6 +167,7 @@ include(":extensions:common:transaction:transaction-local")
 include(":extensions:common:validator:validator-data-address-http-data")
 include(":extensions:common:validator:validator-data-address-kafka")
 include(":extensions:common:vault:vault-hashicorp")
+include(":extensions:common:vault:vault-hashicorp-kubernetes-auth")
 include(":extensions:common:store:sql:edr-index-sql")
 include(":extensions:common:store:sql:jti-validation-store-sql")
 include(":extensions:common:store:sql:sts-client-store-sql")
@@ -316,3 +317,5 @@ include(":dist:bom:sts-feature-bom")
 
 
 include(":version-catalog")
+include("extensions:common:vault:vault-hashicorp-kubernetes-auth")
+findProject(":extensions:common:vault:vault-hashicorp-kubernetes-auth")?.name = "vault-hashicorp-kubernetes-auth"
