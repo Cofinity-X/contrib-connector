@@ -27,6 +27,7 @@ import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.Con
 import org.eclipse.edc.connector.controlplane.contract.spi.types.negotiation.ContractOfferMessage;
 import org.eclipse.edc.connector.controlplane.contract.spi.types.protocol.ContractNegotiationAck;
 import org.eclipse.edc.policy.model.PolicyType;
+import org.eclipse.edc.protocol.spi.ParticipantIdResolver;
 import org.eclipse.edc.statemachine.StateMachineManager;
 
 import java.util.Optional;
@@ -45,6 +46,8 @@ import static org.eclipse.edc.connector.controlplane.contract.spi.types.negotiat
  * Implementation of the {@link ProviderContractNegotiationManager}.
  */
 public class ProviderContractNegotiationManagerImpl extends AbstractContractNegotiationManager implements ProviderContractNegotiationManager {
+    
+    private ParticipantIdResolver participantIdResolver;
 
     private ProviderContractNegotiationManagerImpl() {
     }
@@ -133,15 +136,16 @@ public class ProviderContractNegotiationManagerImpl extends AbstractContractNego
         var agreement = Optional.ofNullable(negotiation.getContractAgreement())
                 .orElseGet(() -> {
                     var lastOffer = negotiation.getLastContractOffer();
+                    var protocol = negotiation.getProtocol();
 
                     var contractPolicy = lastOffer.getPolicy().toBuilder().type(PolicyType.CONTRACT)
                             .assignee(negotiation.getCounterPartyId())
-                            .assigner(participantId)
+                            .assigner(participantIdResolver.resolveFor(protocol))
                             .build();
 
                     return ContractAgreement.Builder.newInstance()
                             .contractSigningDate(clock.instant().getEpochSecond())
-                            .providerId(participantId)
+                            .providerId(participantIdResolver.resolveFor(protocol))
                             .consumerId(negotiation.getCounterPartyId())
                             .policy(contractPolicy)
                             .assetId(lastOffer.getAssetId())
@@ -201,5 +205,9 @@ public class ProviderContractNegotiationManagerImpl extends AbstractContractNego
             return new Builder();
         }
 
+        public Builder participantIdResolver(ParticipantIdResolver participantIdResolver) {
+            manager.participantIdResolver = participantIdResolver;
+            return this;
+        }
     }
 }

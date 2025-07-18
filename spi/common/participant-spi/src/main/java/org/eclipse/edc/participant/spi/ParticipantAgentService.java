@@ -29,7 +29,7 @@ public interface ParticipantAgentService {
     /**
      * Creates a participant agent.
      */
-    ParticipantAgent createFor(ClaimToken token);
+    ParticipantAgent createFor(ClaimToken token, String participantId);
 
     /**
      * Registers an extension that can contribute attributes during the creation of a participant agent.

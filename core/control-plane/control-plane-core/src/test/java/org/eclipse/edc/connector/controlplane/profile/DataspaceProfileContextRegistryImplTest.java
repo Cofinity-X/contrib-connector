@@ -24,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DataspaceProfileContextRegistryImplTest {
 
-    private final DataspaceProfileContextRegistry registry = new DataspaceProfileContextRegistryImpl();
+    //TODO
+    private final DataspaceProfileContextRegistry registry = new DataspaceProfileContextRegistryImpl(ct -> "id");
 
     @Nested
     class GetAllVersions {

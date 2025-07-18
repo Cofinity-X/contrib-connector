@@ -26,6 +26,7 @@ import org.eclipse.edc.connector.controlplane.policy.spi.store.PolicyDefinitionS
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.engine.spi.RuleBindingRegistry;
 import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
+import org.eclipse.edc.protocol.spi.ParticipantIdResolver;
 import org.eclipse.edc.runtime.metamodel.annotation.Configuration;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
@@ -114,6 +115,9 @@ public class ContractManagerExtension implements ServiceExtension {
 
     @Inject
     private ExecutorInstrumentation executorInstrumentation;
+    
+    @Inject
+    private ParticipantIdResolver participantIdResolver;
 
     @Override
     public String name() {
@@ -176,6 +180,7 @@ public class ContractManagerExtension implements ServiceExtension {
                 .build();
 
         providerNegotiationManager = ProviderContractNegotiationManagerImpl.Builder.newInstance()
+                .participantIdResolver(participantIdResolver)
                 .participantId(participantId)
                 .waitStrategy(providerWaitStrategy)
                 .dispatcherRegistry(dispatcherRegistry)

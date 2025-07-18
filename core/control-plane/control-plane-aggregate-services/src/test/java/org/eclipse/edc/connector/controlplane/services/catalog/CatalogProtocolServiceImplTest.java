@@ -20,6 +20,7 @@ import org.eclipse.edc.connector.controlplane.catalog.spi.DataServiceRegistry;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Dataset;
 import org.eclipse.edc.connector.controlplane.catalog.spi.DatasetResolver;
 import org.eclipse.edc.connector.controlplane.catalog.spi.Distribution;
+import org.eclipse.edc.connector.controlplane.profile.ParticipantIdResolverImpl;
 import org.eclipse.edc.connector.controlplane.services.spi.protocol.ProtocolTokenValidator;
 import org.eclipse.edc.participant.spi.ParticipantAgent;
 import org.eclipse.edc.policy.model.Policy;
@@ -54,9 +55,10 @@ class CatalogProtocolServiceImplTest {
     private final DataServiceRegistry dataServiceRegistry = mock();
     private final ProtocolTokenValidator protocolTokenValidator = mock();
     private final TransactionContext transactionContext = spy(new NoopTransactionContext());
+    private final ParticipantIdResolverImpl participantIdResolver = new ParticipantIdResolverImpl("participantId");
 
     private final CatalogProtocolServiceImpl service = new CatalogProtocolServiceImpl(datasetResolver,
-            dataServiceRegistry, protocolTokenValidator, "participantId", transactionContext);
+            dataServiceRegistry, protocolTokenValidator, participantIdResolver, transactionContext);
 
     private ParticipantAgent createParticipantAgent() {
         return new ParticipantAgent(emptyMap(), emptyMap());

@@ -20,6 +20,8 @@ import org.eclipse.edc.participant.spi.ParticipantAgentService;
 import org.eclipse.edc.policy.context.request.spi.RequestPolicyContext;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.policy.model.Policy;
+import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
+import org.eclipse.edc.protocol.spi.IdExtractorService;
 import org.eclipse.edc.spi.iam.IdentityService;
 import org.eclipse.edc.spi.iam.RequestContext;
 import org.eclipse.edc.spi.iam.RequestScope;
@@ -38,15 +40,17 @@ public class ProtocolTokenValidatorImpl implements ProtocolTokenValidator {
     private final IdentityService identityService;
     private final PolicyEngine policyEngine;
     private final ParticipantAgentService agentService;
+    private final DataspaceProfileContextRegistry contextRegistry;
 
     private final Monitor monitor;
 
     public ProtocolTokenValidatorImpl(IdentityService identityService, PolicyEngine policyEngine, Monitor monitor,
-                                      ParticipantAgentService agentService) {
+                                      ParticipantAgentService agentService, DataspaceProfileContextRegistry contextRegistry) {
         this.identityService = identityService;
         this.monitor = monitor;
         this.policyEngine = policyEngine;
         this.agentService = agentService;
+        this.contextRegistry = contextRegistry;
     }
 
     @Override
@@ -64,9 +68,14 @@ public class ProtocolTokenValidatorImpl implements ProtocolTokenValidator {
             monitor.debug(() -> "Unauthorized: %s".formatted(tokenValidation.getFailureDetail()));
             return ServiceResult.unauthorized("Unauthorized");
         }
-
+        
         var claimToken = tokenValidation.getContent();
-        var participantAgent = agentService.createFor(claimToken);
+        var participantId = contextRegistry.getIdExtractionFunction(message.getProtocol()).apply(tokenValidation.getContent());
+        if (participantId == null || participantId.isBlank()) {
+            return ServiceResult.unauthorized("Unauthorized: failed to extract participant ID.");
+        }
+        
+        var participantAgent = agentService.createFor(claimToken, participantId);
         return ServiceResult.success(participantAgent);
     }
 

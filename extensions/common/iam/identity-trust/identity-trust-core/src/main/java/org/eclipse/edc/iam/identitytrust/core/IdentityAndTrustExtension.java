@@ -18,6 +18,7 @@ import jakarta.json.Json;
 import org.eclipse.edc.http.spi.EdcHttpClient;
 import org.eclipse.edc.iam.did.spi.resolution.DidPublicKeyResolver;
 import org.eclipse.edc.iam.did.spi.resolution.DidResolverRegistry;
+import org.eclipse.edc.iam.identitytrust.core.defaults.DcpIdentityExtractionFunction;
 import org.eclipse.edc.iam.identitytrust.core.defaults.DefaultCredentialServiceClient;
 import org.eclipse.edc.iam.identitytrust.core.validation.SelfIssueIdTokenValidationAction;
 import org.eclipse.edc.iam.identitytrust.service.DidCredentialServiceUrlResolver;
@@ -42,6 +43,8 @@ import org.eclipse.edc.jsonld.spi.JsonLd;
 import org.eclipse.edc.jsonld.spi.JsonLdNamespace;
 import org.eclipse.edc.jwt.validation.jti.JtiValidationStore;
 import org.eclipse.edc.participant.spi.ParticipantAgentService;
+import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
+import org.eclipse.edc.protocol.spi.IdExtractorService;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
@@ -145,8 +148,13 @@ public class IdentityAndTrustExtension implements ServiceExtension {
 
     @Inject
     private ParticipantAgentService participantAgentService;
-
+    
     @Inject
+    private IdExtractorService idExtractorService;
+    @Inject
+    private DataspaceProfileContextRegistry dataspaceProfileContextRegistry;
+
+    @Inject(required = false)
     private DcpParticipantAgentServiceExtension participantAgentServiceExtension;
 
     @Inject
@@ -186,7 +194,12 @@ public class IdentityAndTrustExtension implements ServiceExtension {
             context.getMonitor().warning("Could not load JSON-LD file", e);
         }
 
-        participantAgentService.register(participantAgentServiceExtension);
+        
+        if (participantAgentServiceExtension != null) {
+            participantAgentService.register(participantAgentServiceExtension);
+        }
+        
+        dataspaceProfileContextRegistry.overrideDefaultIdExtractionFunction(new DcpIdentityExtractionFunction());
 
         // register revocation services
         var acceptedContentTypes = parseAcceptedContentTypes(contentTypes);

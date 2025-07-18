@@ -31,21 +31,15 @@ import org.eclipse.edc.policy.model.PolicyRegistrationTypes;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
-import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.TypeManager;
 import org.eclipse.edc.validator.spi.DataAddressValidatorRegistry;
 
-import static org.eclipse.edc.participant.spi.ParticipantAgentService.DEFAULT_IDENTITY_CLAIM_KEY;
-
 @Extension(value = CoreServicesExtension.NAME)
 public class CoreServicesExtension implements ServiceExtension {
 
     public static final String NAME = "Core Services";
-
-    @Setting(description = "The name of the claim key used to determine the participant identity", defaultValue = DEFAULT_IDENTITY_CLAIM_KEY)
-    public static final String EDC_AGENT_IDENTITY_KEY = "edc.agent.identity.key";
 
     @Inject
     private TypeManager typeManager;
@@ -75,8 +69,7 @@ public class CoreServicesExtension implements ServiceExtension {
 
     @Provider
     public ParticipantAgentService participantAgentService(ServiceExtensionContext context) {
-        var identityKey = context.getSetting(EDC_AGENT_IDENTITY_KEY, DEFAULT_IDENTITY_CLAIM_KEY);
-        return new ParticipantAgentServiceImpl(identityKey);
+        return new ParticipantAgentServiceImpl();
     }
 
     @Provider

@@ -74,6 +74,7 @@ import org.eclipse.edc.policy.context.request.spi.RequestTransferProcessPolicyCo
 import org.eclipse.edc.policy.context.request.spi.RequestVersionPolicyContext;
 import org.eclipse.edc.policy.engine.spi.PolicyEngine;
 import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
+import org.eclipse.edc.protocol.spi.ParticipantIdResolver;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
@@ -183,6 +184,9 @@ public class ControlPlaneServicesExtension implements ServiceExtension {
 
     @Inject
     private DataspaceProfileContextRegistry dataspaceProfileContextRegistry;
+    
+    @Inject
+    private ParticipantIdResolver participantIdResolver;
 
     @Inject
     private TransferTypeParser transferTypeParser;
@@ -221,9 +225,9 @@ public class ControlPlaneServicesExtension implements ServiceExtension {
     }
 
     @Provider
-    public CatalogProtocolService catalogProtocolService(ServiceExtensionContext context) {
+    public CatalogProtocolService catalogProtocolService() {
         return new CatalogProtocolServiceImpl(datasetResolver, dataServiceRegistry,
-                protocolTokenValidator(), context.getParticipantId(), transactionContext);
+                protocolTokenValidator(), participantIdResolver, transactionContext);
     }
 
     @Provider
@@ -276,7 +280,7 @@ public class ControlPlaneServicesExtension implements ServiceExtension {
     @Provider
     public ProtocolTokenValidator protocolTokenValidator() {
         if (protocolTokenValidator == null) {
-            protocolTokenValidator = new ProtocolTokenValidatorImpl(identityService, policyEngine, monitor, participantAgentService);
+            protocolTokenValidator = new ProtocolTokenValidatorImpl(identityService, policyEngine, monitor, participantAgentService, dataspaceProfileContextRegistry);
         }
         return protocolTokenValidator;
     }

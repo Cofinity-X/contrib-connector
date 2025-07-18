@@ -26,18 +26,25 @@ import org.eclipse.edc.connector.controlplane.defaults.storage.policydefinition.
 import org.eclipse.edc.connector.controlplane.defaults.storage.transferprocess.InMemoryTransferProcessStore;
 import org.eclipse.edc.connector.controlplane.policy.spi.store.PolicyDefinitionStore;
 import org.eclipse.edc.connector.controlplane.profile.DataspaceProfileContextRegistryImpl;
+import org.eclipse.edc.connector.controlplane.profile.IdExtractorServiceImpl;
+import org.eclipse.edc.connector.controlplane.profile.ParticipantIdResolverImpl;
 import org.eclipse.edc.connector.controlplane.query.asset.AssetPropertyLookup;
 import org.eclipse.edc.connector.controlplane.services.spi.callback.CallbackRegistry;
 import org.eclipse.edc.connector.controlplane.transfer.spi.store.TransferProcessStore;
 import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
+import org.eclipse.edc.protocol.spi.IdExtractorService;
+import org.eclipse.edc.protocol.spi.ParticipantIdResolver;
 import org.eclipse.edc.runtime.metamodel.annotation.Extension;
 import org.eclipse.edc.runtime.metamodel.annotation.Inject;
 import org.eclipse.edc.runtime.metamodel.annotation.Provider;
+import org.eclipse.edc.runtime.metamodel.annotation.Setting;
 import org.eclipse.edc.spi.query.CriterionOperatorRegistry;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 
 import java.time.Clock;
+
+import static org.eclipse.edc.participant.spi.ParticipantAgentService.DEFAULT_IDENTITY_CLAIM_KEY;
 
 /**
  * Provides default service implementations for fallback
@@ -46,6 +53,10 @@ import java.time.Clock;
 public class ControlPlaneDefaultServicesExtension implements ServiceExtension {
 
     public static final String NAME = "Control Plane Default Services";
+    
+    @Setting(description = "The name of the claim key used to determine the participant identity", defaultValue = DEFAULT_IDENTITY_CLAIM_KEY)
+    public static final String EDC_AGENT_IDENTITY_KEY = "edc.agent.identity.key";
+    
     private InMemoryAssetIndex assetIndex;
     private InMemoryContractDefinitionStore contractDefinitionStore;
     @Inject
@@ -99,8 +110,14 @@ public class ControlPlaneDefaultServicesExtension implements ServiceExtension {
     }
 
     @Provider(isDefault = true)
-    public DataspaceProfileContextRegistry dataspaceProfileContextRegistry() {
-        return new DataspaceProfileContextRegistryImpl();
+    public DataspaceProfileContextRegistry dataspaceProfileContextRegistry(ServiceExtensionContext context) {
+        var identityKey = context.getSetting(EDC_AGENT_IDENTITY_KEY, DEFAULT_IDENTITY_CLAIM_KEY);
+        return new DataspaceProfileContextRegistryImpl(claimToken -> claimToken.getStringClaim(identityKey));
+    }
+    
+    @Provider(isDefault = true)
+    public ParticipantIdResolver participantIdentifierResolver(ServiceExtensionContext context) {
+        return new ParticipantIdResolverImpl(context.getParticipantId());
     }
 
     private ContractDefinitionStore getContractDefinitionStore() {

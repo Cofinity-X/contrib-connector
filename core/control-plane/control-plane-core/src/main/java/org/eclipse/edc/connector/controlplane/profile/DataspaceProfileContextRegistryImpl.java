@@ -19,16 +19,28 @@ import org.eclipse.edc.protocol.spi.DataspaceProfileContextRegistry;
 import org.eclipse.edc.protocol.spi.ProtocolVersion;
 import org.eclipse.edc.protocol.spi.ProtocolVersions;
 import org.eclipse.edc.protocol.spi.ProtocolWebhook;
+import org.eclipse.edc.spi.iam.ClaimToken;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 public class DataspaceProfileContextRegistryImpl implements DataspaceProfileContextRegistry {
+    
+    private static final String DEFAULT = "default";
 
     private final List<DataspaceProfileContext> defaultProfiles = new ArrayList<>();
     private final List<DataspaceProfileContext> standardProfiles = new ArrayList<>();
+    
+    private final Map<String, Function<ClaimToken, String>> extractionFunctions = new HashMap<>();
 
+    public DataspaceProfileContextRegistryImpl(Function<ClaimToken, String> defaultParticipantIdExtractionFunction) {
+        extractionFunctions.put(DEFAULT, defaultParticipantIdExtractionFunction);
+    }
+    
     @Override
     public void registerDefault(DataspaceProfileContext profileContext) {
         defaultProfiles.add(profileContext);
@@ -38,7 +50,18 @@ public class DataspaceProfileContextRegistryImpl implements DataspaceProfileCont
     public void register(DataspaceProfileContext context) {
         standardProfiles.add(context);
     }
-
+    
+    @Override
+    public void register(DataspaceProfileContext context, Function<ClaimToken, String> idExtractionFunction) {
+        standardProfiles.add(context);
+        extractionFunctions.put(context.name(), idExtractionFunction);
+    }
+    
+    @Override
+    public void overrideDefaultIdExtractionFunction(Function<ClaimToken, String> extractionFunction) {
+        extractionFunctions.put(DEFAULT, extractionFunction);
+    }
+    
     @Override
     public ProtocolVersions getProtocolVersions() {
         var versions = profiles().stream().map(DataspaceProfileContext::protocolVersion).distinct().toList();
@@ -57,7 +80,12 @@ public class DataspaceProfileContextRegistryImpl implements DataspaceProfileCont
         return profiles().stream().filter(it -> it.name().equals(protocol))
                 .map(DataspaceProfileContext::protocolVersion).findAny().orElse(null);
     }
-
+    
+    @Override
+    public Function<ClaimToken, String> getIdExtractionFunction(String protocol) {
+        return extractionFunctions.getOrDefault(protocol, extractionFunctions.get(DEFAULT));
+    }
+    
     private List<DataspaceProfileContext> profiles() {
         return standardProfiles.isEmpty() ? defaultProfiles : standardProfiles;
     }

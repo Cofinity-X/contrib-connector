@@ -14,12 +14,10 @@
 
 package org.eclipse.edc.iam.identitytrust.core;
 
-import org.eclipse.edc.iam.identitytrust.core.defaults.DefaultDcpParticipantAgentServiceExtension;
 import org.eclipse.edc.iam.identitytrust.core.defaults.DefaultTrustedIssuerRegistry;
 import org.eclipse.edc.iam.identitytrust.core.defaults.InMemorySignatureSuiteRegistry;
 import org.eclipse.edc.iam.identitytrust.core.scope.DcpScopeExtractorRegistry;
 import org.eclipse.edc.iam.identitytrust.spi.ClaimTokenCreatorFunction;
-import org.eclipse.edc.iam.identitytrust.spi.DcpParticipantAgentServiceExtension;
 import org.eclipse.edc.iam.identitytrust.spi.scope.ScopeExtractorRegistry;
 import org.eclipse.edc.iam.identitytrust.spi.verification.SignatureSuiteRegistry;
 import org.eclipse.edc.iam.verifiablecredentials.spi.validation.TrustedIssuerRegistry;
@@ -70,11 +68,6 @@ public class DcpDefaultServicesExtension implements ServiceExtension {
     @Provider(isDefault = true)
     public SignatureSuiteRegistry createSignatureSuiteRegistry() {
         return new InMemorySignatureSuiteRegistry();
-    }
-
-    @Provider(isDefault = true)
-    public DcpParticipantAgentServiceExtension createDefaultDcpParticipantAgentServiceExtension() {
-        return new DefaultDcpParticipantAgentServiceExtension();
     }
 
     @Provider(isDefault = true)

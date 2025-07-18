@@ -22,6 +22,7 @@ import org.eclipse.edc.connector.controlplane.catalog.spi.DatasetResolver;
 import org.eclipse.edc.connector.controlplane.services.spi.catalog.CatalogProtocolService;
 import org.eclipse.edc.connector.controlplane.services.spi.protocol.ProtocolTokenValidator;
 import org.eclipse.edc.policy.context.request.spi.RequestCatalogPolicyContext;
+import org.eclipse.edc.protocol.spi.ParticipantIdResolver;
 import org.eclipse.edc.spi.iam.TokenRepresentation;
 import org.eclipse.edc.spi.result.ServiceResult;
 import org.eclipse.edc.transaction.spi.TransactionContext;
@@ -33,20 +34,20 @@ public class CatalogProtocolServiceImpl implements CatalogProtocolService {
 
     private final DatasetResolver datasetResolver;
     private final DataServiceRegistry dataServiceRegistry;
-    private final String participantId;
     private final TransactionContext transactionContext;
 
     private final ProtocolTokenValidator protocolTokenValidator;
+    private final ParticipantIdResolver participantIdResolver;
 
     public CatalogProtocolServiceImpl(DatasetResolver datasetResolver,
                                       DataServiceRegistry dataServiceRegistry,
                                       ProtocolTokenValidator protocolTokenValidator,
-                                      String participantId,
+                                      ParticipantIdResolver participantIdResolver,
                                       TransactionContext transactionContext) {
         this.datasetResolver = datasetResolver;
         this.dataServiceRegistry = dataServiceRegistry;
         this.protocolTokenValidator = protocolTokenValidator;
-        this.participantId = participantId;
+        this.participantIdResolver = participantIdResolver;
         this.transactionContext = transactionContext;
     }
 
@@ -61,7 +62,7 @@ public class CatalogProtocolServiceImpl implements CatalogProtocolService {
                         return Catalog.Builder.newInstance()
                                 .dataServices(dataServices)
                                 .datasets(datasets.toList())
-                                .participantId(participantId)
+                                .participantId(participantIdResolver.resolveFor(message.getProtocol()))
                                 .build();
                     }
                 })

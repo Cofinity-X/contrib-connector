@@ -14,7 +14,11 @@
 
 package org.eclipse.edc.protocol.spi;
 
+import org.eclipse.edc.spi.iam.ClaimToken;
+import org.eclipse.edc.spi.result.Result;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.function.Function;
 
 /**
  * A registry of configured {@link DataspaceProfileContext}.
@@ -26,20 +30,34 @@ import org.jetbrains.annotations.Nullable;
  * A single "standard" registration will hide all the default ones,
  */
 public interface DataspaceProfileContextRegistry {
+    
+    //TODO should participantIdResolver be integrated into the registry? would make sense
 
     /**
-     * Register a default profile context.
+     * Register a default profile context. Will use the default mechanism for ID extraction.
      *
      * @param context the default profile context.
      */
     void registerDefault(DataspaceProfileContext context);
 
     /**
-     * Register a standard profile context.
+     * Register a standard profile context. Will use the default mechanism for ID extraction.
      *
      * @param context the standard profile context.
      */
     void register(DataspaceProfileContext context);
+    
+    /**
+     * Register a standard profile context.
+     *
+     * @param context the standard profile context.
+     * @param idExtractionFunction the function for extracting the participant ID from a {@link ClaimToken}.
+     */
+    void register(DataspaceProfileContext context, Function<ClaimToken, String> idExtractionFunction);
+    
+    //TODO Javadoc
+    //TODO is this required on default profiles as well? probably not, as for any custom protocol version standard profile would be used?
+    void overrideDefaultIdExtractionFunction(Function<ClaimToken, String> extractionFunction);
 
     /**
      * get all the protocol versions.
@@ -66,4 +84,7 @@ public interface DataspaceProfileContextRegistry {
      */
     @Nullable
     ProtocolVersion getProtocolVersion(String protocol);
+    
+    //TODO Javadoc
+    Function<ClaimToken, String> getIdExtractionFunction(String protocol);
 }
